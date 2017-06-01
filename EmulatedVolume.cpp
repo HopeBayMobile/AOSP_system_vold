@@ -29,12 +29,16 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <openssl/md5.h>
+
+#include <cutils/log.h>
+
 using android::base::StringPrintf;
 
 namespace android {
 namespace vold {
 
-static const char* kFusePath = "/system/bin/sdcard";
+static const char* kFusePath = "/system/bin/HCFSvol";
 
 EmulatedVolume::EmulatedVolume(const std::string& rawPath) :
         VolumeBase(Type::kEmulated), mFusePid(0) {
@@ -77,18 +81,31 @@ status_t EmulatedVolume::doMount() {
 
     dev_t before = GetDevice(mFuseWrite);
 
+    char mountcmd[1024];
+
+    snprintf(mountcmd, 1024, "%s mount hcfs_external %s default",
+             kFusePath, mFuseDefault.c_str());
+    SLOGE("Mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
+    snprintf(mountcmd, 1024, "%s mount hcfs_external %s read",
+             kFusePath, mFuseRead.c_str());
+    SLOGE("Mounting fuse on %s", mountcmd);
+    system(mountcmd);
+    snprintf(mountcmd, 1024, "%s mount hcfs_external %s write",
+             kFusePath, mFuseWrite.c_str());
+    SLOGE("Mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
+    mFusePid = 0;
+
+/*
     if (!(mFusePid = fork())) {
         if (execl(kFusePath, kFusePath,
-                "-u", "1023", // AID_MEDIA_RW
-                "-g", "1023", // AID_MEDIA_RW
-                "-m",
-                "-w",
-                mRawPath.c_str(),
-                label.c_str(),
-                NULL)) {
+                "mount", "hcfs_external",
+                mFuseDefault.c_str(), "default", NULL)) {
             PLOG(ERROR) << "Failed to exec";
         }
-
         LOG(ERROR) << "FUSE exiting";
         _exit(1);
     }
@@ -97,6 +114,41 @@ status_t EmulatedVolume::doMount() {
         PLOG(ERROR) << getId() << " failed to fork";
         return -errno;
     }
+
+    mFusePid = 0;
+
+    if (!(mFusePid = fork())) {
+        if (execl(kFusePath, kFusePath,
+                "mount", "hcfs_external",
+                mFuseRead.c_str(), "read", NULL)) {
+            PLOG(ERROR) << "Failed to exec";
+        }
+        LOG(ERROR) << "FUSE exiting";
+        _exit(1);
+    }
+
+    if (mFusePid == -1) {
+        PLOG(ERROR) << getId() << " failed to fork";
+        return -errno;
+    }
+    mFusePid = 0;
+
+    if (!(mFusePid = fork())) {
+        if (execl(kFusePath, kFusePath,
+                "mount", "hcfs_external",
+                mFuseWrite.c_str(), "write", NULL)) {
+            PLOG(ERROR) << "Failed to exec";
+        }
+        LOG(ERROR) << "FUSE exiting";
+        _exit(1);
+    }
+
+    if (mFusePid == -1) {
+        PLOG(ERROR) << getId() << " failed to fork";
+        return -errno;
+    }
+    mFusePid = 0;
+*/
 
     while (before == GetDevice(mFuseWrite)) {
         LOG(VERBOSE) << "Waiting for FUSE to spin up...";
