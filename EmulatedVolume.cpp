@@ -83,6 +83,21 @@ status_t EmulatedVolume::doMount() {
 
     char mountcmd[1024];
 
+    /* Try to unmount the mountpoints first */
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseDefault.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseRead.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseWrite.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
     snprintf(mountcmd, 1024, "%s mount hcfs_external %s default",
              kFusePath, mFuseDefault.c_str());
     SLOGE("Mounting fuse on %s", mountcmd);
@@ -163,6 +178,24 @@ status_t EmulatedVolume::doUnmount() {
     // the FUSE process first, most file system operations will return
     // ENOTCONN until the unmount completes. This is an exotic and unusual
     // error code and might cause broken behaviour in applications.
+
+    char mountcmd[1024];
+
+    /* Try to unmount the mountpoints first */
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseDefault.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseRead.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+    snprintf(mountcmd, 1024, "%s unmount hcfs_external %s",
+             kFusePath, mFuseWrite.c_str());
+    SLOGE("Un-mounting fuse on %s", mountcmd);
+    system(mountcmd);
+
     KillProcessesUsingPath(getPath());
     ForceUnmount(mFuseDefault);
     ForceUnmount(mFuseRead);
